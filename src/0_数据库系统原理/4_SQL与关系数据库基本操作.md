@@ -1,6 +1,6 @@
 # SQL与关系数据库基本操作
 
-## SQL概述(识记)
+## 1.SQL概述(识记)
 ### 什么是SQL
 SQL(Structured Query Language) 结构化查询语句，是专门用来与数据库通信的语言，它可以帮助用户操作关系数据库。
 
@@ -25,6 +25,9 @@ SQL(Structured Query Language) 结构化查询语句，是专门用来与数据�
   - GRANT 用于授予权限
   - REVOKE 用于收回权限
 
+- 嵌入式和动态SQL规则：规定了SQL语句在高级语言程序设计中使用的规范方法，以便适应较为复杂的应用。
+- SQL调用和会话规则
+
 ![4_1_SQL组成.png](images/4_1_SQL组成.png)
 
 ### 练习题
@@ -42,7 +45,7 @@ SQL(Structured Query Language) 结构化查询语句，是专门用来与数据�
 - C UPDATE语句
 - D DELETE语句
 
-## MySQL预备知识
+## 2.MySQL预备知识
 ### MySQL使用基础(识记)
 关系数据库管理系统(RDBMS)
 - LAMP（Linux Apache MySQL PHP）
@@ -108,7 +111,552 @@ select count(*) from tb_access; # { count(*): 182388 }
 ### MySQL的安装与配置(识记)
 mac下安装参考：http://www.zuo11.com/blog/2016/10/db_mysql_basecmd.html
 
-## 数据定义(重要)
-## 数据更新(重要)
-## 数据查询(重要)
-## 视图(虚表)
+## 3.数据定义(重要)
+### 3.1数据库模式定义(综合应用)
+模式也可以叫做表，关系模式 => 关系表 
+
+#### 创建数据库
+使用 create database 或 create schema 语句
+
+```bash
+create {database | schema} [if not exists] db_name
+[default] character set [=] charset_name # 指定字符集
+| [default] collate [=] collation_name # 指定字符集的校对规则，可以理解为排序
+
+# collate [kəˈleɪt] 校对
+# []标示其内容为可选项；| 用于分隔花括号中的选择项
+
+# 示例
+create database mysql_test
+show databases; # 查看数据库
+```
+#### 选择数据库
+选择数据库或者从一个数据库切到另一个数据库
+
+```bash
+use database_name;
+
+# 示例
+use mysql_test;
+```
+
+#### 修改数据库
+
+```bash
+alter {database | schema} [db_name] alter_specification...
+# specification [ˌspesɪfɪˈkeɪʃn] 规格，说明
+
+# 示例，修改数据库默认字符集
+alter database mysql_test default character set gb2312 default collate gb2312_chinese_ci;
+
+# 使用status可以查看当前数据库信息，看是否修改成功
+status;
+show variables like '%char%'; # 或者这个命令也可以
+```
+
+#### 删除数据库
+
+```bash
+drop {database | schema} [if exists] db_name;
+
+# 示例
+ drop database if exists mysql_test;
+```
+
+#### 查看数据库
+
+```bash
+show {databases | schemas}
+[like 'pattern' | where expr] 
+# like关键字用于匹配指定的数据库名称
+# where从句用于指定数据库名称查询范围的条件
+
+# 示例
+show databases like '%my%';
+```
+
+#### 练习题
+1.在mysql中，可以使用（  ）语句来创建数据库。单选题，答案：A
+- A create database
+- B alter database
+- C drop database
+- D show database
+
+2.在mysql中，通常用来指定一个已有数据库作为当前工作数据库的语句是（  ）。单选题，答案：D
+- A using
+- B used
+- C uses
+- D use
+
+3.建一个名为student的数据库；建一个名为teacher的数据库；选择student数据库；删除teacher数据库；
+
+```bash
+create database if not exists student;
+create database if not exists teacher;
+use student;
+drop database if exists teacher;
+```
+
+### 3.2表定义(综合应用)
+#### 创建表
+数据表，被定义为字段的集合，按 **行** 和 **列** 的格式来存储的，每一 **行** 代表一条及记录。每一**列**代表记录中一个字段的取值。**确定表中每个字段的数据类型**
+
+```bash
+create [temporary] table  tb_name (
+  字段名1 数据类型 [列级完整性约束条件] [默认值]
+  [, 字段名2 数据类型 [列级完整性约束条件] [默认值]]
+  [, ...]
+  [, 表级完整性约束条件]
+)[engint=引擎类型];
+
+# temporary 是否是临时表
+# 例子：在一个已有数据库mysql_test中新建一个包含客户姓名、性别、地址、联系方式等内容的客户基本信息表，要求将客户的id号指定为该表的主键
+create table customers (
+  cust_id int not null auto_increment comment '客户id',
+  cust_name char(50) not null comment '客户姓名',
+  cust_sex char(1) not null comment '客户性别',
+  cust_address char(50) null comment '客户地址',
+  cust_contact char(50) null comment '客户联系方式',
+  create_time timestamp default current_timestamp comment '创建时间',
+  primary key(cust_id)
+) comment '客户基本信息表';
+
+# cust_id int not null auto_increment primary key comment '客户id',
+
+# show tables;
++----------------------+
+| Tables_in_mysql_test |
++----------------------+
+| customers            |
++----------------------+
+
+# desc customers
++--------------+-----------+------+-----+-------------------+-------------------+
+| Field        | Type      | Null | Key | Default           | Extra             |
++--------------+-----------+------+-----+-------------------+-------------------+
+| cust_id      | int(11)   | NO   | PRI | NULL              | auto_increment    |
+| cust_name    | char(50)  | NO   |     | NULL              |                   |
+| cust_sex     | char(1)   | NO   |     | NULL              |                   |
+| cust_address | char(50)  | YES  |     | NULL              |                   |
+| cust_contact | char(50)  | YES  |     | NULL              |                   |
+| create_time  | timestamp | YES  |     | CURRENT_TIMESTAMP | DEFAULT_GENERATED |
++--------------+-----------+------+-----+-------------------+-------------------+
+```
+
+#### 更新表 alter table
+使用 **alter table**语句，增加或删除列，创建或取消索引，更改原有列的数据类型、重新命名列或表，更改表的评注何表的引擎类型，为表重新创建触发器、存储过程、索引和外键等。
+
+##### add [column]
+向表里面增加一列
+
+```bash
+# 向数据库mysql_test的表customers中添加一列，并命名为cust_city，要求其不能为NULL，默认值为 "Wuhan"，且该列谓语原表cust_sex列之后。
+
+alter table mysql_test.customers add cust_city char(10) not null default "Wuhan" comment "客户所在城市" after cust_sex;
+
+# mysql> desc customers;
++--------------+-----------+------+-----+-------------------+-------------------+
+| Field        | Type      | Null | Key | Default           | Extra             |
++--------------+-----------+------+-----+-------------------+-------------------+
+| cust_id      | int(11)   | NO   | PRI | NULL              | auto_increment    |
+| cust_name    | char(50)  | NO   |     | NULL              |                   |
+| cust_sex     | char(1)   | NO   |     | NULL              |                   |
+| cust_city    | char(10)  | NO   |     | Wuhan             |                   |
+| cust_address | char(50)  | YES  |     | NULL              |                   |
+| cust_contact | char(50)  | YES  |     | NULL              |                   |
+| create_time  | timestamp | YES  |     | CURRENT_TIMESTAMP | DEFAULT_GENERATED |
++--------------+-----------+------+-----+-------------------+-------------------+
+
+```
+##### change [column]
+修改表中列的名称或数据类型
+
+```bash
+# 示例：将cust_sex 列改为 sex
+alter table mysql_test.customers change column cust_sex sex char(1) null default "M";
+
+# mysql> desc customers;
++--------------+-----------+------+-----+-------------------+-------------------+
+| Field        | Type      | Null | Key | Default           | Extra             |
++--------------+-----------+------+-----+-------------------+-------------------+
+| cust_id      | int(11)   | NO   | PRI | NULL              | auto_increment    |
+| cust_name    | char(50)  | NO   |     | NULL              |                   |
+| sex          | char(1)   | YES  |     | M                 |                   |
+| cust_city    | char(10)  | NO   |     | Wuhan             |                   |
+| cust_address | char(50)  | YES  |     | NULL              |                   |
+| cust_contact | char(50)  | YES  |     | NULL              |                   |
+| create_time  | timestamp | YES  |     | CURRENT_TIMESTAMP | DEFAULT_GENERATED |
++--------------+-----------+------+-----+-------------------+-------------------+
+```
+
+##### alter [column]
+修改或删除表中指定列的默认值
+
+```bash
+# 修改列的默认值
+alter table mysql_test.customers alter column cust_city set default 'Beijing';
+
+# mysql> desc customers;
++--------------+-----------+------+-----+-------------------+-------------------+
+| Field        | Type      | Null | Key | Default           | Extra             |
++--------------+-----------+------+-----+-------------------+-------------------+
+| cust_id      | int(11)   | NO   | PRI | NULL              | auto_increment    |
+| cust_name    | char(50)  | NO   |     | NULL              |                   |
+| sex          | char(1)   | YES  |     | M                 |                   |
+| cust_city    | char(10)  | NO   |     | Beijing           |                   |
+| cust_address | char(50)  | YES  |     | NULL              |                   |
+| cust_contact | char(50)  | YES  |     | NULL              |                   |
+| create_time  | timestamp | YES  |     | CURRENT_TIMESTAMP | DEFAULT_GENERATED |
++--------------+-----------+------+-----+-------------------+-------------------+
+```
+
+##### modifiy [column]
+只修改指定列的数据类型，不会干涉其列名
+```bash
+# 修改cust_name 为第一列，改为 char(20)
+alter table mysql_test customers modify column cust_name char(20) first;
+
+# mysql> desc customers;
++--------------+-----------+------+-----+-------------------+-------------------+
+| Field        | Type      | Null | Key | Default           | Extra             |
++--------------+-----------+------+-----+-------------------+-------------------+
+| cust_name    | char(20)  | YES  |     | NULL              |                   |
+| cust_id      | int(11)   | NO   | PRI | NULL              | auto_increment    |
+| sex          | char(1)   | YES  |     | M                 |                   |
+| cust_city    | char(10)  | NO   |     | Beijing           |                   |
+| cust_address | char(50)  | YES  |     | NULL              |                   |
+| cust_contact | char(50)  | YES  |     | NULL              |                   |
+| create_time  | timestamp | YES  |     | CURRENT_TIMESTAMP | DEFAULT_GENERATED |
++--------------+-----------+------+-----+-------------------+-------------------+
+```
+
+##### drop [column]
+删除列表中的列
+```bash
+# 删除列
+alter table mysql_test.customers drop column cust_contact;
+
+# mysql> desc customers;
++--------------+-----------+------+-----+-------------------+-------------------+
+| Field        | Type      | Null | Key | Default           | Extra             |
++--------------+-----------+------+-----+-------------------+-------------------+
+| cust_name    | char(20)  | YES  |     | NULL              |                   |
+| cust_id      | int(11)   | NO   | PRI | NULL              | auto_increment    |
+| sex          | char(1)   | YES  |     | M                 |                   |
+| cust_city    | char(10)  | NO   |     | Beijing           |                   |
+| cust_address | char(50)  | YES  |     | NULL              |                   |
+| create_time  | timestamp | YES  |     | CURRENT_TIMESTAMP | DEFAULT_GENERATED |
++--------------+-----------+------+-----+-------------------+-------------------+
+```
+
+##### rename to
+修改表名
+
+```bash
+# 修改表名
+alter table mysql_test.customers rename to mysql_test.backup_customers;
+
+# mysql> show tables 
++----------------------+
+| Tables_in_mysql_test |
++----------------------+
+| backup_customers     |
++----------------------+
+
+```
+
+#### 删除表 drop table
+```bash
+drop [temporary] table [if exists] tb_name [, tb2_name, ...] [restrict | cascade]
+# restrict [rɪˈstrɪkt] 限定、约束
+# cascade  [kæˈskeɪd] 串联
+
+# 删除表
+drop table if exists backup_customers;
+
+# mysql> show tables;
+Empty set (0.01 sec)
+```
+
+#### 查看表 show tables
+```bash
+# 查看数据表
+show [full] tables [{from | in} db_name] [like 'pattern' | where expr]
+
+show tables;
+
+# 查看表结构
+{desc | describe} tb_name [column | wild]
+
+# 示例
+create table tb_test (id int auto_increment, name varchar(20), age int, primary key(id));
+
+# mysql> show tables;
++----------------------+
+| Tables_in_mysql_test |
++----------------------+
+| tb_test              |
++----------------------+
+
+# show columns from tb_test; 与 desc tb_test 等价
+# mysql> describe tb_test;
++-------+-------------+------+-----+---------+----------------+
+| Field | Type        | Null | Key | Default | Extra          |
++-------+-------------+------+-----+---------+----------------+
+| id    | int(11)     | NO   | PRI | NULL    | auto_increment |
+| name  | varchar(20) | YES  |     | NULL    |                |
+| age   | int(11)     | YES  |     | NULL    |                |
++-------+-------------+------+-----+---------+----------------+
+3 rows in set (0.00 sec)
+
+# 只看一个字段
+# mysql> desc tb_test name; 
++-------+-------------+------+-----+---------+-------+
+| Field | Type        | Null | Key | Default | Extra |
++-------+-------------+------+-----+---------+-------+
+| name  | varchar(20) | YES  |     | NULL    |       |
++-------+-------------+------+-----+---------+-------+
+1 row in set (0.01 sec)
+```
+
+#### 练习题
+1.在mysql中，可以使用（  ）语句来更改原有表的结构，包括增加、删减列等操作。单选题，答案：B
+- A alter database
+- B alter talbe
+- C create table
+- D create databases
+
+2.在创建表的create table 语句中，若添加可选项 "temporary" 关键字，则表示使用该语句创建的表为 （  ）。填空题，答案：临时表
+
+3.在create table语句中，通常使用关键字 (  ) 来指定主键。填空题，答案：primary key
+
+4.新建一个包含客户姓名、性别、地址、联系方式等内容的客户基本信息表，要求将客户的id号指定为该表的主键，给横线处填空，SQL语句如下：
+```bash
+mysql > user mysql_test;
+Database changed
+mysql > create table customers
+-> (
+-> cust_id int not null auto_increment,
+-> cust_name char(1) not null,
+-> cust_sec char(1) not null default 0,
+-> cust_address char(50) null,
+-> cust_contact char(50) null,
+-> _______(cust_id)
+-> ); 
+```
+填空题，答案：primary key 
+
+5.将数据库mysql_test中表customers的cust_sex列重命名为sex，且将其数据类型更改为字符长度为1的字符数据类型char(1)，允许其为NULL，默认值为字符常量 'M'。写出相关的SQL语句。设计题
+
+```bash
+alter table mysql_test.customers change column cust_sex sex char(1) null default 'M';
+```
+
+6.重名表可以使用alter table语句或（  ）table 语句。填空题，答案：rename
+
+7.显示表结构使用的语句是（  ）。单选题，答案：B
+- A show tables
+- B show columns
+- C display tables
+- D display columns
+
+### 3.3索引定义(综合应用)
+索引是提高数据文件访问效率的有效方法
+
+![4_3_索引.png](images/4_3_索引.png)
+
+索引存在的弊端：
+- 索引是以文件的形式存储的，如果有大量的索引，索引文件可能比数据文件更快达到最大的文件尺寸。
+- 索引在提高查询速度的同时，会降低更新表的速度。
+
+索引的分类:
+- 普通索引(index或key)
+- 唯一性索引(unique)
+- 主键(primary key)
+
+索引通常被创建成单列索引和组合索引
+
+#### create index创建索引
+```bash
+# unique 创建唯一性索引
+# index_name 指定索引名
+# 在表 tb1_name 上创建索引
+# index_col_name 关于索引列的描述
+create [unique] index index_name on tb1_name(index_col_name, ...)
+
+# 索引列描述
+# ASC 升序(默认) DESC 降序
+col_name[(length)][ASC | DESC]
+
+# 例子1：
+# 在数据库 mysql_test 的表 customers 上，根据客户姓名列的前三个字符创建一个升序索引index_customers。
+create index index_customers on mysql_test.customers(cust_name(3) ASC);
+
+# 例子2：
+# 在数据库 mysql_test 的表 customers 上，根据客户姓名列和客户id号创建一个组合索引index_cust
+create index index_cust on mysql_test.customers(cust_name,cust_id);
+
+```
+
+#### create table创建索引
+```bash
+# constraint [kənˈstreɪnt] 约束
+# 1.使用主键，语法项 [constraint[symbol]] primary key(index_col_name, ...)
+#   用于表示在创建新表的同时创建该表的主键
+# 2.语法项 {index | key} [index_name](index_col_name, ...)
+#   用于表示在创建新表的同时创建该表的索引
+# 3.语法项 [constranit[symbol]] unique [index|key] [index_name](index_col_name, ...)
+#   用于表示在创建新表的同时创建该表的唯一性索引
+# 4.语法项 [constraint[symbol]] foreign key [index_name](index_col_name, ...)
+#   用于表示在创建新表的同时创建该表的外键
+```
+例子: 在已有数据库mysql_test上新建一个包含产品卖家id号，姓名、地址、联系方式、售卖产品类型、当月销量等内容的产品卖家信息表seller。要求在创建的同时，为该表添加由卖家id号和售卖产品类型组成的联合主键，并在当月销量上创建索引。
+```bash
+create table seller (
+  seller_id int not null auto_increment,
+  seller_name char(50) not null,
+  seller_address char(50) null,
+  seller_contact char(50) null,
+  product_type int(5) not null,
+  sales int null comment '当月销量',
+  primary key(seller_id, product_type),
+  index index_seller(sales)
+);
+
+# primary key(seller_id, product_type) 主键索引
+# index index_seller(sales) # 创建index_seller的索引
+```
+
+#### alter table创建索引
+```bash
+# 1.语法项：add {index | key} [index_name](index_col_name, ...)
+#   用于表示在修改表的同时为该表添加索引
+# 2.语法项：add [constraint[symbol]] primary key (index_col_name, ...)
+#   用于表示在修改表的同时为该表添加主键
+# 3.语法项：add [constraint[symbol]] unique [index|key] [index_name](index_col_name,...)
+#   用于表示在修改表的同时为该表添加唯一性索引
+# 4.语法项: add [constraint[symbol]] foreign key (index_col_name)
+#   用于表示在创建新表的同时为该表添加外键
+```
+使用alter table语句在数据库mysql_test中表seller的姓名上添加一列非唯一的索引，取名index_seller_name
+```bash
+alter table mysql_test.seller add index index_col_name(seller_name);
+```
+
+#### show index查看索引
+```bash
+show {index | indexs | keys} {from | in} tb_name [{from | in} db_name] [where expr]
+
+# 示例
+# show index in seller; 
+show index from seller; 
+```
+
+![4_4_查看索引.png](images/4_4_查看索引.png)
+
+#### drop index 删除索引
+```bash
+drop index index_name on tb_name;
+
+# 示例：删除 customers 表中的索引 index_cust
+drop index index_cust on customers;
+```
+
+#### alter table删除索引
+1. 选用drop primary key 子句用于删除表中的主键，由于一个表中只有一个主键，其也是一个索引。
+2. 选用drop index 子句用于删除各种类型的索引
+3. 选用drop foreign key 子句用于删除外键
+
+```bash
+# 示例：
+# 使用alter table语句删除数据库mysql_test中表customers的主键和索引index_customers。
+alter table customers drop primary key; # mysql必须有一个主键，无法删除 Error
+alter table customers drop index index_customers; 
+alter table customers drop primary key, drop index index_customers; # Error
+```
+
+#### 练习题
+1.所谓（  ），就是DBMS根据表中的一列或若干列按照一定顺序建立的列值与记录行之间的对应关系表。填空题，答案：索引
+
+2.下面哪个语句不能创建索引（  ）。单选题，答案：D
+- A create index
+- B create table
+- C alter table
+- D alter index
+
+3.使用alter table语句在数据库mysql_test中表seller的姓名列上添加一个非唯一的索引，取名为index_seller_name。设计题
+
+```bash
+alter table mysql_test.seller add index index_seller_name(seller_name);
+```
+
+## 4.数据更新(重要)
+### insert 插入数据(综合应用)
+```bash
+# 插入数据语法:
+insert [into] tb1_name [(col_name, ...)] {values | value} ({expr | default}, ...), (...), ...
+# expr 表示一个常量、变量或一个表达式，也可以是空值，NULL
+# default 指定此列值为该列的默认值
+```
+#### insert...values 插入单行或多行数据
+
+示例：使用insert...values语句向数据库mysql_test的表customers中插入这样一行完整数据：
+```bash
+(901, 张三, F, 北京市, 朝阳区)
+
+insert mysql_test.customers values (901, '张三', 'F', '北京市', '朝阳区', '2019-05-13');
+
+
+# mysql> select * from customers;
++---------+-----------+----------+--------------+--------------+---------------------+
+| cust_id | cust_name | cust_sex | cust_address | cust_contact | create_time         |
++---------+-----------+----------+--------------+--------------+---------------------+
+|     901 | 张三       | F        | 北京市        | 朝阳区        | 2019-05-13 00:00:00 |
++---------+-----------+----------+--------------+--------------+---------------------+
+1 row in set (0.00 sec)
+
+insert into mysql_test.customers (cust_id,cust_name,cust_sex,cust_address,cust_contact) values (902, '李四', 'F', '北京市', '朝阳区');
+
+# mysql> select * from customers;
++---------+-----------+----------+--------------+--------------+---------------------+
+| cust_id | cust_name | cust_sex | cust_address | cust_contact | create_time         |
++---------+-----------+----------+--------------+--------------+---------------------+
+|     901 | 张三       | F        | 北京市        | 朝阳区        | 2019-05-13 00:00:00 |
+|     902 | 李四       | F        | 北京市        | 朝阳区        | 2020-02-12 22:09:10 |
++---------+-----------+----------+--------------+--------------+---------------------+
+2 rows in set (0.00 sec)
+```
+
+#### insert...set插入部分列数据
+```bash
+# 语法
+insert [into] tb1_name set col_name={expr | default},...
+```
+示例：使用insert...set语句向数据库mysql_test的表customers中插入数据：名为李四，地址为武汉，性别默认
+```bash
+alter table customers change cust_sex cust_sex char(1) default 'M' not null;
+insert mysql_test.customers set cust_name='李四',cust_address='武汉';
+
+# mysql> select * from customers;
++---------+-----------+----------+--------------+--------------+---------------------+
+| cust_id | cust_name | cust_sex | cust_address | cust_contact | create_time         |
++---------+-----------+----------+--------------+--------------+---------------------+
+|     901 | 张三       | F        | 北京市        | 朝阳区        | 2019-05-13 00:00:00 |
+|     902 | 李四       | F        | 北京市        | 朝阳区        | 2020-02-12 22:09:10 |
+|     903 | 李四       | M        | 武汉          | NULL         | 2020-02-12 22:19:03 |
++---------+-----------+----------+--------------+--------------+---------------------+
+3 rows in set (0.00 sec)
+```
+
+#### insert...select插入子查询数据
+```bash
+# 语法：
+insert [into] tb1_name [{col_name, ...}] select ...
+```
+
+### delete 删除数据(综合应用)
+
+### update 修改数据(综合应用)
+
+## 5.数据查询(重要)
+## 6.视图(虚表)
