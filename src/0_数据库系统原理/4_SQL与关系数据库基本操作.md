@@ -598,6 +598,7 @@ insert [into] tb1_name [(col_name, ...)] {values | value} ({expr | default}, ...
 # expr 表示一个常量、变量或一个表达式，也可以是空值，NULL
 # default 指定此列值为该列的默认值
 ```
+
 #### insert...values 插入单行或多行数据
 
 示例：使用insert...values语句向数据库mysql_test的表customers中插入这样一行完整数据：
@@ -625,7 +626,12 @@ insert into mysql_test.customers (cust_id,cust_name,cust_sex,cust_address,cust_c
 |     902 | 李四       | F        | 北京市        | 朝阳区        | 2020-02-12 22:09:10 |
 +---------+-----------+----------+--------------+--------------+---------------------+
 2 rows in set (0.00 sec)
+
+# 使用insert...values插入多行数据
+INSERT INTO table_name (column1,column2,column3,...)
+VALUES (value1,value2,value3,...),(value1,value2,value3,...),(value1,value2,value3,...)
 ```
+
 
 #### insert...set插入部分列数据
 ```bash
@@ -649,14 +655,374 @@ insert mysql_test.customers set cust_name='李四',cust_address='武汉';
 ```
 
 #### insert...select插入子查询数据
+将从一个表中 select 查询到的一行数据，直接插入到另一个表中，注意：列名要相对应，否则会报错
 ```bash
 # 语法：
 insert [into] tb1_name [{col_name, ...}] select ...
 ```
 
 ### delete 删除数据(综合应用)
+```bash
+# 语法：
+delete from tb1_name [where where_condition] [order by ...] [limit row_count]
 
+# 示例：
+delete from customers where cust_id > 902; # 删除cust_id > 902的数据 
+delete from customers; # 删除表里的所有数据
+```
 ### update 修改数据(综合应用)
+```bash
+# 语法：
+update tb1_name set col_name1={expr1 | default} [, col_name2 = {expr1 | default}]...
+[where where_condition] [order by ...] [limit row_count]
+```
+示例：使用update语句将数据库mysql_test的表customers中姓名为"张三"的客户的地址更新为"武汉"
 
-## 5.数据查询(重要)
+```bash
+update mysql_test.customers set cust_address='武汉' where cust_name='张三';
+```
+
+### 练习题
+1.使用（  ）语句可以插入单行或多行元组数据。填空题，答案：insert...values
+
+2.使用delete语句删除数据库mysql_test的表customers中客户名为"李四"的客户信息。设计题
+
+```bash
+delete from mysql_test.customers where cust_name='李四';
+```
+
+## 5.数据查询(综合应用)
+### select语句
+```bash
+# 语句
+select [all | distinct | distinctrow] # distinctrow [dɪˈstɪŋkt] 不同的，明显的
+select_expr [, select_expr...]
+from table_references # 数据来源
+[where where_condition] # 条件
+[group by {col_name | expr | position} [asc | desc], ... [with rollup]] # 对检索到的数据进行分组
+[having where_condition] # 指定组的选择条件
+[order by {col_name | expr | position} [asc | desc], ...] # 对查询结果进行排序
+[limit {[offset_val,] row_count | row_count offset offset_val}] # 限制行数
+```
+
+### 列的选择与指定
+查询数据库mysql_test的表customers中各个客户的姓名、性别和地址信息
+```bash
+select cust_name,cust_sex,cust_address from mysql_test.customers;
+
+# mysql> select cust_name,cust_sex,cust_address from mysql_test.customers;
++-----------+----------+--------------+
+| cust_name | cust_sex | cust_address |
++-----------+----------+--------------+
+| 张三       | F        | 武汉         |
+| 李四       | F        | 北京市       |
+| 李四       | M        | 武汉         |
++-----------+----------+--------------+
+3 rows in set (0.01 sec)
+
+# 查询数据库mysql_test的表customers中各个客户的所有信息
+select * from mysql_test.customers;
+
+```
+#### 定义并使用列的别名
+```bash
+# 语法
+column_name [as] colums_alias
+
+# 示例
+select cust_name,cust_address as 地址,cust_contact from mysql_test.customers;
+# mysql> select cust_name,cust_address as 地址,cust_contact from mysql_test.customers;
++-----------+-----------+--------------+
+| cust_name | 地址      | cust_contact |
++-----------+-----------+--------------+
+| 张三       | 武汉      | 朝阳区       |
+| 李四       | 北京市    | 朝阳区       |
+| 李四       | 武汉      | NULL         |
++-----------+-----------+--------------+
+```
+#### 替换查询结果集中的数据
+```bash
+# 语法
+case 
+when 条件1 then 表达式1
+  when 条件2 then 表达式2
+  ...
+else 表达式
+end [as] column_alias
+```
+例子：查询数据库mysql_test的表customers中客户的cust_name和cust_sex列，要求判断结果集中cust_sex列的值，如果该列的值为M，则显示输出"男"，否则为 "女"，同时在结果集的显示中将cust_sex列用别名 "性别"标注
+```bash
+select cust_name, 
+case 
+when cust_sex='M' then '男' 
+else '女' 
+end as 性别 
+from mysql_test.customers;
+
++-----------+--------+
+| cust_name | 性别   |
++-----------+--------+
+| 张三       | 女     |
+| 李四       | 女     |
+| 李四       | 男     |
++-----------+--------+
+```
+
+#### 计算列值
+例子：查询数据库mysql_test的表customers中每个客户的cust_name列，cust_sex列，以及对cust_id列加上数字100后的结果
+```bash
+select cust_name,cust_sex,cust_id+100 from mysql_test.customers;
+
+# mysql> select cust_name,cust_sex,cust_id+100 from mysql_test.customers;
++-----------+----------+-------------+
+| cust_name | cust_sex | cust_id+100 |
++-----------+----------+-------------+
+| 张三      | F        |        1001 |
+| 李四      | F        |        1002 |
+| 李四      | M        |        1004 |
++-----------+----------+-------------+
+```
+#### 聚合函数
+
+函数名 | 说明
+--- | ---
+count | 求组中项数，返回int类型整数
+max | 求最大值
+min | 求最小值
+sum | 求表达式中所有值的和
+avg | 求组中值的平均值
+std 或 stddev | 返回给定表达式中所有值的标准值
+variance | 返回给定表达式中所有值的方差
+group_concat | 返回由属于一组的列值连接组合而成的结果
+bit_and | 逻辑或
+bir_or | 逻辑与
+bit_xor | 逻辑异或
+
+#### 练习题
+1.使用SQL语句中进行查询操作是，若希望查询出全部存在的元组。一般使用的保留字是（  ）。单选题，答案：D
+- A Unique
+- B Except
+- C Distinct
+- D All
+
+2.select语句的子句中，仅在按组计算聚合时使用的是（  ）。单选题：C
+- A FROM
+- B WHERE
+- C GROUP BY
+- D ORDER BY
+
+3.查询数据库mysql_test的表customers中各个客户的所有信息，写出相应SQL语句。设计题
+
+```bash
+select * from mysql_test.customers;
+```
+
+4.聚合函数通常是数据库系统中一类系统（  ）。填空题，答案：内置函数
+
+5.在数据查询时，替换查询结果集中的数据需要用到（  ）表达式。填空题，答案：case
+
+6.查询数据库mysql_test的表customers中客户的cust_name列何cust_sex列，要求判断结果集中cust_sex列的值，如果该列的值为M，则显示输出'男'，否则为'女'，同时在结果集的显示中将cust_sex用列名 "性别"标注，写出SQL语句。设计题
+
+```bash
+select cust_name,
+case 
+when cust_sex='M' then '男'
+else '女'
+end as 性别
+from mysql_test.customers;
+```
+
+7.请写出定义并使用列的别名的语法格式。简答题
+
+```bash
+colunm_name [as] colum_alias #  [ˈeɪliəs] 别名
+```
+
+8.下列选项中用来表示组中项数的聚合函数是（  ）。单选题，答案：A
+- A count
+- B sum
+- C avg
+- D std
+
+### from子句与多表连接查询
+#### 交叉连接(笛卡尔积)
+```bash
+select * from tb1 cross join tb2;
+# 等价于
+select * from tb1,tb2;
+
+# 示例
+create table tb1 (tb1_id int primary key, tb1_col char(10) not null);
+create table tb2 (tb2_id int primary key, tb2_col char(10) not null);
+insert tb1 values (1, 'tb1_a'),(2, 'tb1_b'),(3, 'tb1_c');
+insert tb2 values (1, 'tb2_a'),(2, 'tb2_b'),(3, 'tb2_c');
+
+# mysql> select * from tb1;
++--------+---------+
+| tb1_id | tb1_col |
++--------+---------+
+|      1 | tb1_a   |
+|      2 | tb1_b   |
+|      3 | tb1_c   |
++--------+---------+
+3 rows in set (0.00 sec)
+
+# mysql> select * from tb2;
++--------+---------+
+| tb2_id | tb2_col |
++--------+---------+
+|      1 | tb2_a   |
+|      2 | tb2_b   |
+|      3 | tb2_c   |
++--------+---------+
+3 rows in set (0.01 sec)
+
+# mysql> select * from tb1 cross join tb2;
+# 或者 mysql> select * from tb1,tb2;
++--------+---------+--------+---------+
+| tb1_id | tb1_col | tb2_id | tb2_col |
++--------+---------+--------+---------+
+|      1 | tb1_a   |      1 | tb2_a   |
+|      2 | tb1_b   |      1 | tb2_a   |
+|      3 | tb1_c   |      1 | tb2_a   |
+|      1 | tb1_a   |      2 | tb2_b   |
+|      2 | tb1_b   |      2 | tb2_b   |
+|      3 | tb1_c   |      2 | tb2_b   |
+|      1 | tb1_a   |      3 | tb2_c   |
+|      2 | tb1_b   |      3 | tb2_c   |
+|      3 | tb1_c   |      3 | tb2_c   |
++--------+---------+--------+---------+
+9 rows in set (0.00 sec)
+```
+
+#### 内连接
+```bash
+# select some_colums from tb1 inner join tb2 on some_conditions;
+# 大写更好理解，以后要改掉全小写的习惯
+SELECT some_colums FROM tb1 INNER JOIN tb2 ON some_conditions;
+# some_conditions [tb1.]<列名或列别名><比较运算符>[tb2.]<列名或列别名>
+# tb1.b = tb2.b
+```
+例子：根据学生基本信息登记表tb_student何学生成绩表tb_score，使用内连接查询每个学生及其选课成绩的详细信息
+```bash
+# 默认是INNER 内连接，不写INNER，直接写 JOIN就是内连接
+SELECT * FROM tb_student INNER JOIN tb_score ON tb_student.stu_id=tb_score.stu_id;
+```
+内连接分类
+- 等值连接：使用运算符 =
+- 非等值连接：使用除 = 之外的其它比较运算符
+- 自连接：将一个表与它自身进行连接
+
+#### 外连接
+在内连接中，一般都是查询到的满足条件的数据，而外连接可以获取到满足条件的和不满足条件的数据
+
+1. 左外连接：在FROM子句中使用关键字 LEFT OUTER JOIN 或 LEFT JOIN
+2. 右外连接：在FROM子句中使用关键字 RIGHT OUTER JOIN 或 RIGHT JOIN
+
+例子：根据学生基本信息登记表tb_student何学生成绩表tb_score，使用左连接查询每个学生及其选课成绩的详细信息
+
+```bash
+# 基表为 tb_student
+SELECT * FROM tb_student LEFT JOIN tb_score ON tb_student.stu_id=tb_score.stu_id;
+```
+
+#### 练习题
+1.交叉连接又称（  ）。填空题，答案：笛卡尔积
+
+2.SELECT语句的查询对象是由（  ）子句指定的。可根据用户的查询需求实现单表或多表查询。填空题：FROM
+
+3.关于内连接的使用，可以将一个表与它本身进行连接，这种连接方式称为（  ）。单选，答案：A
+- A 自连接
+- B 等值连接
+- C 非等值连接
+- D 交叉连接
+
+4.SELECT操作使用”连接“运算的连接方式不包括（  ）。单选题，答案：C
+- A 交叉连接
+- B 内连接
+- C 串行连接
+- D 外连接
+
+5.假设数据库中有两张表，分别是tb1和tb2，现要求输出这两张表执行交叉连接后所有的数据集，写出相应的SQL。设计题
+
+```bash
+SELECT * FROM tb1,tb2;
+# 或者
+SELECT * FROM tb1 CROSS JOIN tb2;
+```
+
+6.写出在MySQL中，内连接的语法格式。简答题
+
+```bash
+SELECT ... FROM tb1 INNER JOIIN tb2 ON some_confition;
+```
+
+7.简述左外连接与右外连接的区别。简答题
+
+左外连接：也称为左连接。以左表为基表。在FROM子句中使用关键字"LEFT OUTER JOIN" 或关键字 "LEFT JOIN"来连接两张表。
+
+右外连接：也称为右连接。以右表为基表。在FROM子句中使用关键字"RIGHT OUTER JOIN" 或关键字 "RIGHT JOIN"来连接两张表。
+
+8.关于内连接的使用，如若在ON子句的连接条件中使用运算符 "="，则此连接方式为（  ）。填空题，答案：等值连接
+
+### where子句与条件查询
+#### 比较运算
+
+比较运算符 | 说明
+--- | ---
+= ，!= | 等于、不等于
+< ，<= | 小于，小于等于
+> ，>= | 大于，大于等于
+<> | 不等于
+<=> | 不等于，不返回UNKNOWN
+
+不等于有三种，他们有什么区别？
+
+一般where条件判断时，如果左右两边的表达式都不为NULL(空)，那么比较结果返回true或false，但是当左侧表达式或右侧表达式值为空(NULL)的时候，就会返回UNKNOWN。而 `<=>` 不会返回UNKNOWN，只会返回是否相等true or false
+
+示例：在数据库mysql_test的表customers中查找所有男性客户的信息
+```bash
+SELECT * FROM mysql_test.customers WHERE cust_sex = 'M';
+```
+
+#### 判定范围 BETWEEN
+当查询的过滤条件被限定在值的某个范围时，可以使用关键字 "BETWEEN"
+```bash
+# 语法
+expression [NOT] BETWEEN expression1 AND expression2
+
+# 例子：
+# 在数据库mysql_test的表customers中，查询客户id号在903至912之间的客户信息
+SELECT * FROM mysql_test.customers WHERE cust_id BETWEEN 903 AND 912;
+```
+#### 判定范围 IN
+使用 IN 关键字可以指定一个值的枚举表，该表中会列出所有可能的值。
+```bash
+# 语法：
+expression IN(expression1 [, ...n])
+
+# 示例：查询ID为903，906，908的客户信息
+SELECT * FROM mysql_test.customers WHERE cust_id IN(903,906,908);
+```
+
+#### 判定空值
+```bash
+# 语法
+expression IS [NOT] NULL
+
+# 示例：
+SELECT cust_name FROM mysql_test.customers WHERE cust_contact IS NULL;
+```
+
+#### 练习题
+1.当需要判断一个表达式的值是否为空值时，可以使用关键字（  ）来实现。填空题：IS NULL
+
+2.在WHERE子句中，用于范围判定的关键字是（  ）和 （  ）。填空题：BETWEEN, IN
+
+3.在where子句中，当查询的过滤条件被限定在值的某个范围时，其使用语法格式为：expression [NOT] （  ） Nexpresssion1 （  ） expression2。填空题 BETWEEN, AND
+
+### group by子句与分组数据
+### having子句
+### order by子句
+### limit子句
 ## 6.视图(虚表)
