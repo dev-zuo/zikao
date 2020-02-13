@@ -1021,8 +1021,306 @@ SELECT cust_name FROM mysql_test.customers WHERE cust_contact IS NULL;
 
 3.在where子句中，当查询的过滤条件被限定在值的某个范围时，其使用语法格式为：expression [NOT] （  ） Nexpresssion1 （  ） expression2。填空题 BETWEEN, AND
 
+#### 子查询
+两个查询嵌套
+
+- 表子查询
+- 行子查询
+- 列子查询
+- 标量子查询
+
+##### 结合 IN 使用的子查询
+主要用于判定一个给定值是否存在于子查询的结果集中
+```bash
+# 语法
+expression [NOT] IN (subquery)
+```
+示例：查询任意所选课程成绩高于80分的学生的学号和姓名信息
+```
+SELECT stu_no,stu_name FROM tb_stu 
+WHERE stu_no IN(SELECT stu_no FROM tb_score WHERE score > 80)
+```
+
+##### 结合比较运算符使用的子查询
+```bash
+# 语法
+expression { = | < | <= | > | >= | <=> | <> | !=} {ALL | SOME | ANY} (subquery)
+# IN 等同于 = any 等同于 = some
+# NOT IN 等同于 <> ALL
+SELECT stu_no,stu_name FROM tb_stu WHERE stu_no =any(SELECT stu_no FROM tb_score WHERE score > 80)
+```
+##### 结合 EXIST 使用子查询
+```bash
+# 语法
+EXISTS (subquery)
+
+SELECT stu_no,stu_name FROM tb_stu WHERE exists(SELECT * FROM tb_score WHERE tb_ste.stu_no = tb_score.stu_no)
+
+# 子查询的结果不为空，则返回TRUE，否则返回FALSE
+```
+
 ### group by子句与分组数据
-### having子句
+```bash
+# 语法
+GROUP BY  {col_name | expr | position} [ASC | DESC],...[WITH ROLLUP]
+# col_name 指定用于分组的选择列
+# expr 指定用于分组的表达式
+# position 指定用于分组的列在SELECT语句结果集中位置，通常是一个正整数
+# WITH ROLLUP 可选项，指定在结果集中不仅包含由GROUP BY子句分组后的数据行，还包含各分组的汇总行，可以得到每个分组以及每个分组汇总级别的值
+```
+示例1：在数据库mysql_test的表customers中，获取一个数据结果集，要求该结果集中分别包含每个相同地址的男性客户人数和女性客户人数。
+```bash
+select cust_address,cust_sex,COUNT(*) AS 'renshu' FROM mysql_test.customers GROUP BY cust_address,cust_sex;
+
+# mysql> select cust_address,cust_sex,COUNT(*) AS 'renshu' FROM mysql_test.customers GROUP BY cust_address,cust_sex;
++--------------+----------+--------+
+| cust_address | cust_sex | renshu |
++--------------+----------+--------+
+| 武汉          | F        |      2 |
+| 北京市        | F        |      1 |
+| 武汉          | M        |      1 |
++--------------+----------+--------+
+3 rows in set (0.00 sec)
+
+```
+示例2：在数据库mysql_test的表customers中，获取一个数据结果集，要求该结果集中分别包含每个相同地址的男性客户人数和女性客户人数、总人数以及客户的总人数。
+```bash
+# 加上WITH ROLLUP, 
+# mysql> select cust_address,cust_sex,COUNT(*) AS 'renshu' FROM mysql_test.customers GROUP BY cust_address,cust_sex WITH ROLLUP;
++--------------+----------+--------+
+| cust_address | cust_sex | renshu |
++--------------+----------+--------+
+| 北京市        | F        |      1 |
+| 北京市        | NULL     |      1 | # 北京总人数
+| 武汉          | F        |      2 |
+| 武汉          | M        |      1 |
+| 武汉          | NULL     |      3 | # 武汉总人数
+| NULL         | NULL     |      4 | # 总人数
++--------------+----------+--------+
+6 rows in set (0.01 sec)
+```
+### having子句 过滤分组
+HAVING 一般与 GROUP BY 连用，用于过滤分组
+```bash
+# 语法
+HAVING where_condition
+# where_condition 指定过滤条件
+```
+HAVING 与 WHERE 的区别：
+- HAVING用来过滤分组，WHERE用来过滤数据行
+- HAVING可以包含聚合函数，WHERE不可以包含聚合函数
+- HAVING在数据分组后进行过滤，WHERE在数据分组前过滤
+
+示例：在数据库mysql_test的表customers中查找一类客户信息：要求在返回的结果集中，列出相同客户地址中满足客户人数少于3的所有客户姓名及其对应地址。
+
+```bash
+SELECT cust_name,cust_address FROM mysql_test.customers GROUP BY cust_address HAVING COUNT(*) < 3;
+
+# mysql> SELECT cust_name,cust_address,COUNT(*) as  'renshu' FROM mysql_test.customers GROUP BY cust_address HAVING renshu < 3;
++-----------+--------------+--------+
+| cust_name | cust_address | renshu |
++-----------+--------------+--------+
+| 李四      | 北京市       |      1 |
++-----------+--------------+--------+
+1 row in set (0.01 sec)
+
+# mysql> SELECT cust_name,cust_address,COUNT(*) as  'renshu' FROM mysql_test.customers GROUP BY cust_address;
++-----------+--------------+--------+
+| cust_name | cust_address | renshu |
++-----------+--------------+--------+
+| 张三      | 武汉         |      3 |
+| 李四      | 北京市       |      1 |
++-----------+--------------+--------+
+2 rows in set (0.00 sec)
+```
+
 ### order by子句
+```bash
+# 语法
+ORDER BY {col_name | expr | position} {ASC | DESC}
+# col_name 用于指定排序的列
+# position 指定用于排序的列在SELECT语句结果集中的位置，通常是一个正整数
+```
+示例：在数据mysql_test的表customers中依次按照客户姓名和地址的降序方式输出客户的姓名和性别。
+```bash
+SELECT cust_name,cust_sex FROM mysql_test.customers ORDER BY cust_name DESC,cust_address DESC;
+
+# mysql> SELECT cust_name,cust_sex FROM mysql_test.customers ORDER BY cust_name DESC,cust_address DESC;
++-----------+----------+
+| cust_name | cust_sex |
++-----------+----------+
+| 王五       | F        |
+| 李四       | M        |
+| 李四       | F        |
+| 张三       | F        |
++-----------+----------+
+```
+
 ### limit子句
-## 6.视图(虚表)
+```bash
+# 语法
+LIMIT {[offset,] row_count | row_count OFFSET offset}
+# offset 可选项，默认为0，指定返回数据的第一行在SELECT语句结果集中的偏移量，必须是非负的证书常量 
+# row_count 指定返回数据的行数，必须是非负的整数常量
+# row_count OFFSET offset 从 offset+1行开始，取row_count行
+```
+示例：在数据库mysql_test的表customers中查找从第5位客户开始的3位客户的id号和姓名
+```bash
+SELECT cust_id,cust_name FROM mysql_test.customers LIMIT 3 OFFSET 4; 
+SELECT cust_id,cust_name FROM mysql_test.customers LIMIT 4,3; 
+# 从第5行开始的3行数据，(初始行为0,1,2,3,4,5)
+```
+
+### 练习题
+1.设一个图书借阅管理数据库中包括三个关系模式：
+
+图书（图书编号、书名、作者、出版社、单价）
+
+读者（借书证号、姓名、性别、单位、地址）
+
+借阅（借书证号、图书编号、借阅日期、归还日期、备注）
+
+用SQL语句完成下面1-3题。设计图
+
+(1)查询价格在50到60之间的图书，结果按出版社及单价升序排列
+```bash
+SELECT * FROM 图书 WHERE 价格 BETWEEN 50 AND 60 ORDER BY 出版社,单价;
+```
+(2)查询王明所借阅的所有图书的书名及借阅时间
+```bash
+SELECT 图书.书名,借阅.借阅时间 FROM 图书,读者,借阅 WHERE 姓名="王名" AND 借阅.借书证号=读者.借书证号 AND 图书.图书编号=借阅.图书编号;
+```
+(3) 查询各个出版社图书的最高价格、最低价格和平均价格。
+```bash
+SELECT 书名,出版社,MAX(单价) AS 最高价格,MIN(单价) AS 最低价格, AVG(单价) AS 平均价格 FROM 图书 GROUP BY 出版社;
+```
+
+2.在SELECT语句中，除了使用GROUP BY子句分钟数据之外，还可以使用（  ）子句来过滤分组。填空题：HAVING
+
+3.设有一个关系模式图书(图书编号、书名、作者、出版社、单价)，查询价格在50-60元之间的图书，结果按出版社及单价升序排列，则下列用于排序的是 （  ）。单选题，答案：B
+- A GROUP BY
+- B ORDER BY
+- C HAVING
+- D LIMIT
+
+## 6.视图(虚表，综合应用)
+### 什么是视图(领会)
+视图是数据库中的一个对象，它是数据库管理系统提供给用户的以多种角度观察数据库中数据的一种重要机制。
+
+视图不是数据库中真实的表，而是一张虚拟的表，其自身并不存储数据。
+
+### 使用视图的优点(领会)
+- 集中分散的数据
+- 简化查询语句
+- 重用SQL语句
+- 保护数据安全，看不到基表的其它信息，可以保护数据的安全
+- 共享所需数据，多个人建多个视图，共享所需的数据
+- 更改数据格式，比较灵活，可以在创建视图时修改数据的格式
+
+### 创建视图 CREATE VIEW
+```bash
+# 语法
+CREATE [OR REPLACE] VIEW view_name [(column_list)] AS select_statement 
+[WITH [CASCADED | LOCAL] CHECK OPTION]]
+# view_name 指定视图名称
+# column_list 可选项 为每个列指定名称
+# select_statement 指定 SELECT 语句
+# [WITH [CASCADED | LOCAL] CHECK OPTION]] 可选项，指定在可更新视图上所进行的修改都需要符合select_statement中所指定的限制条件
+```
+示例：在数据mysql_test中创建视图customers_view，要求该视图包含客户信息表customers中所有男客户的信息，并且要求保证今后对该视图数据的修改都必须符合客户性别为男性这个条件。
+```bash
+CREATE OR REPLACE VIEW mysql_test.customers_view AS
+SELECT * FROM mysql_test.customers WHERE cust_sex = 'M' 
+WITH CHECK OPTION;
+
+# SHOW TABLES; 可以查看到新建的视图
+```
+### 删除视图 DROP VIEW
+```bash
+# 语法
+DROP VIEW [IF EXISTS] view_name [,view_name]...
+[RESTICT | CASCADE]
+
+DROP VIEW IF EXISTS customers_view;
+```
+### 修改视图定义 ALTER VIEW
+对已有视图的定义（结构）进行修改
+```bash
+# 语法
+ALTER VIEW view_name [(column_list)] AS select_statement 
+[WITH [CASCADED | LOCAL] CHECK OPTION]]
+
+ALTER VIEW customers_view (cust_id,cust_name) AS SELECT cust_id,cust_name FROM customers;
+
+# mysql> select * from customers_view;
++---------+-----------+
+| cust_id | cust_name |
++---------+-----------+
+|     901 | 张三      |
+|     902 | 李四      |
+|     904 | 李四      |
+|     909 | 周明      |
+|     999 | 王五      |
++---------+-----------+
+```
+
+### 查看视图定义 SHOW CREATE VIEW
+```bash
+# 语法
+SHOW CREATE VIEW view_name
+# view_name 指定要查看视图的名称
+
+# mysql> SHOW CREATE VIEW customers_view;
++----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------+----------------------+
+| View           | Create View                                                                                                                                                                                                                                                                                                                                                                                                                                     | character_set_client | collation_connection |
++----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------+----------------------+
+| customers_view | CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `customers_view` AS select `customers`.`cust_id` AS `cust_id`,`customers`.`cust_name` AS `cust_name`,`customers`.`cust_sex` AS `cust_sex`,`customers`.`cust_address` AS `cust_address`,`customers`.`cust_contact` AS `cust_contact`,`customers`.`create_time` AS `create_time` from `customers` where (`customers`.`cust_sex` = 'M') WITH CASCADED CHECK OPTION | utf8                 | utf8_general_ci      |
++----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------+----------------------+
+1 row in set (0.01 sec)
+
+```
+
+### 更新视图数据 INSERT
+#### INSERT 通过视图向基本表插入数据
+示例：在数据库 mysql_test 中，向视图customer_view插入记录：(909, '周明', 'M', '武汉市', '洪山区')
+```bash
+INSERT INTO mysql_test.customers_view VALUES (909, '周明', 'M', '武汉市', '洪山区', '2019-12-12');
+# mysql> SELECT * FROM customers_view;
++---------+-----------+----------+--------------+--------------+---------------------+
+| cust_id | cust_name | cust_sex | cust_address | cust_contact | create_time         |
++---------+-----------+----------+--------------+--------------+---------------------+
+|     904 | 李四       | M        | 武汉          | NULL        | 2020-02-12 22:48:38 |
+|     909 | 周明       | M        | 武汉市        | 洪山区        | 2019-12-12 00:00:00 |
++---------+-----------+----------+--------------+--------------+---------------------+
+```
+#### UPDATE 通过视图修改基本表数据
+示例：将视图customers_view中所有cust_address列更新为"上海市"
+```bash
+UPDATE mysql_test.customers_view SET cust_address = '上海市';
+```
+#### DELETE 通过视图删除基本表数据
+示例：删除视图customers_view中姓名为 "周明" 的客户信息
+```bash
+DELETE FROM mysql_test.customers_view WHERE cust_name='周明';
+```
+
+### 查询视图数据
+示例：在视图customers_view中查找客户id号为905的客户姓名及地址
+```bash
+SELECT cust_name,cust_address FROM mysql_test.customers_view WHERE cust_id=905;
+```
+
+### 练习题
+1.下列关于视图的说法中错误的是（  ）。单选题：C
+- A 视图是从一个或多个基本表导出的表，它是虚表
+- B 视图是数据库中的一个对象
+- C 视图是数据库中真实的表，而不是一张虚表
+- D 视图可以用来定义新的视图
+
+2.（  ）是用来查看存储在别处的数据的一种虚拟表，而其自身并不存储数据。填空题：视图
+
+3.设有一个关系模式读者(借书证号，姓名，性别，单位，地址)，用SQL语句建立 "红星汽车厂" 读者的视图RST，则创建视图的语句是（  ）。单选题，答案：A
+- A CREATE VIEW RST
+- B ALTER VIEW
+- C DROP VIEW RST
+- D SHOW CREATE VIEW RST
